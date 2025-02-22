@@ -1,0 +1,8 @@
+/licitaciones_sync
+    ├── main.py                 # Archivo principal que ejecuta la sincronización
+    ├── config.py               # Configuración de la base de datos y API
+    ├── database.py             # Funciones para conexión y manipulación de la base de datos
+    ├── api.py                  # Funciones para consumir la API
+    ├── process.py              # Funciones para procesar los datos antes de insertarlos
+    ├── utils.py                # Funciones auxiliares como validaciones y conversión de datos
+    ├── requirements.txt        # Librerías necesarias
