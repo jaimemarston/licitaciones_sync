@@ -33,7 +33,7 @@ def insert_data_into_db(records):
             """, (
                 tender.get('id'),
                 tender.get('title'),
-                compiled.get('date'),
+                tender.get('datePublished'),
                 tender.get('description'),
                 tender.get('value', {}).get('amount'),
                 tender.get('value', {}).get('currency'),
@@ -43,6 +43,30 @@ def insert_data_into_db(records):
             ))
             licitacion_id = cursor.fetchone()[0]
             print(f"✅ Licitación insertada con ID: {licitacion_id}")
+           
+            # Procesar los periodos de la licitación
+            periods = {
+                "tender": tender.get('tenderPeriod', {}),
+                "enquiry": tender.get('enquiryPeriod', {})
+            }
+
+            for period_type, period_data in periods.items():
+                start_date = period_data.get('startDate')
+                end_date = period_data.get('endDate')
+                duration_days = period_data.get('durationInDays')
+
+                # Insertar solo si tiene fechas válidas
+                if start_date and end_date:
+                    cursor.execute("""
+                        INSERT INTO licitaciones_cronograma (
+                            licitacion_id, tipo_periodo, fecha_inicio, fecha_fin, duracion_dias, name
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        licitacion_id, period_type, start_date, end_date, duration_days,period_type
+                    ))
+                    
+               #print(f"📅 Periodo '{period_type}' insertado para la licitación {licitacion_id}")
 
             # Procesar proveedores y postores
             tenderers = tender.get('tenderers', [])

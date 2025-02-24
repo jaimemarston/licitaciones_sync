@@ -8,14 +8,15 @@ DB_CONFIG = {
     'port': 5432
 }
 
+#API_URL = "https://contratacionesabiertas.osce.gob.pe/api/v1/records"
 API_URL = "https://contratacionesabiertas.osce.gob.pe/api/v1/records"
 
 # Agregar paginación para traer más de 20 registros
 PARAMS = {
     'order': 'desc',
     'sourceId': 'seace_v3',
-    'startDate': '2024-01-01',
-    'endDate': '2024-01-30',
+    'dataSegmentationID': '2025-02',
+    'tenderId':'',
     'page': 1,  # Paginación inicial
     'limit': 100  # Intenta aumentar este valor si la API lo permite
 }
