@@ -1,13 +1,21 @@
 # process.py
 from database import get_db_connection, clear_tables
 from utils import get_or_create_comprador, get_or_create_proveedor, translate_category
+import psycopg2
+from datetime import datetime, timedelta
+import pytz
+import time
+
+# Definir la zona horaria de Perú
+peru_tz = pytz.timezone("America/Lima")
+fmt = "%Y-%m-%dT%H:%M:%S%z"
 
 def insert_data_into_db(records):
     """Inserta los datos en la base de datos PostgreSQL."""
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
-
+      
         # Limpiar tablas antes de insertar nuevos datos
         clear_tables(cursor)
 
@@ -43,7 +51,14 @@ def insert_data_into_db(records):
             ))
             licitacion_id = cursor.fetchone()[0]
             print(f"✅ Licitación insertada con ID: {licitacion_id}")
-           
+            # Insertar relación en la tabla pivote licitaciones_buyer_pivot
+            cursor.execute("""
+                INSERT INTO licitaciones_buyer_pivot (tender_id, buyer_id)
+                VALUES (%s, %s)
+            """, (licitacion_id, comprador_id))
+
+            #print(f"✅ Relación insertada en `licitaciones_buyer_pivot`: Licitación {licitacion_id} ↔ Comprador {comprador_id}")
+
             # Procesar los periodos de la licitación
             periods = {
                 "tender": tender.get('tenderPeriod', {}),
@@ -53,17 +68,33 @@ def insert_data_into_db(records):
             for period_type, period_data in periods.items():
                 start_date = period_data.get('startDate')
                 end_date = period_data.get('endDate')
+
+                # Verificar si start_date existe antes de intentar formatearlo
+                if start_date:
+                    fecha_original = datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%S%z")
+                    fecha_corregida = fecha_original + timedelta(hours=5)
+                    start_date = fecha_corregida.replace(tzinfo=None)  # Eliminar la zona horaria para evitar conversiones
+                
+                # Si end_date no existe, usar start_date corregido
+                if not end_date:
+                    end_date = start_date
+                else:
+                    fecha_original_end = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%S%z")
+                    fecha_corregida_end = fecha_original_end + timedelta(hours=5)
+                    end_date = fecha_corregida_end.replace(tzinfo=None)  # Eliminar la zona horaria
+                    
+
                 duration_days = period_data.get('durationInDays')
 
-                # Insertar solo si tiene fechas válidas
                 if start_date and end_date:
+
                     cursor.execute("""
                         INSERT INTO licitaciones_cronograma (
-                            licitacion_id, tipo_periodo, fecha_inicio, fecha_fin, duracion_dias, name
+                            licitacion_id, title, fecha_inicio, fecha_fin, duracion_dias
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s)
                     """, (
-                        licitacion_id, period_type, start_date, end_date, duration_days,period_type
+                        licitacion_id, period_type, start_date, end_date, duration_days
                     ))
                     
                #print(f"📅 Periodo '{period_type}' insertado para la licitación {licitacion_id}")
@@ -85,32 +116,28 @@ def insert_data_into_db(records):
                     
                 cursor.execute("""
                     INSERT INTO licitaciones_postores (
-                        licitacion_id, postores_id, ruc, nombre, ganador, ganador_estado
+                        licitacion_id, supplier_id,postores_id, nombre, ganador, ganador_estado
                     )
                     VALUES (%s, %s, %s, %s, %s, %s)
-                """, (licitacion_id, proveedor_id, ruc, nombre, ganador, ganador_estado))
+                """, (licitacion_id, proveedor_id, proveedor_id, nombre, ganador, ganador_estado))
 
             # Insertar documentos relacionados
             documents = tender.get('documents', [])
             for doc in documents:
                 title = doc.get('title') if doc.get('title') else "Sin título"  # Asigna "Sin título" si no tiene
                 url = doc.get('url') if doc.get('url') else "Sin url"  # Asigna "URL" si no tiene
-
-                
                 cursor.execute("""
-                    INSERT INTO licitaciones_documento (
-                        id_documento, url, fecha_publicacion, formato, tipo_documento, titulo, licitacion_id
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    doc.get('id'),
+                  INSERT INTO licitaciones_cronograma (
+                            licitacion_id, url, fecha_inicio, tipo_documento, title
+                        )
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (
+                    licitacion_id,
                     url,
                     doc.get('datePublished'),
-                    doc.get('format'),
                     doc.get('documentType'),
-                    title,
-                    licitacion_id
-                ))
+                    title       
+                    ))
 
 
             # Insertar ítems relacionados
@@ -167,9 +194,15 @@ def insert_data_into_db(records):
         connection.commit()
         print("✅ Todos los datos han sido insertados correctamente.")
 
-    except Exception as e:
-        connection.rollback()
-        print("❌ Error al insertar datos en la base de datos:", e)
+    except psycopg2.DatabaseError as e:
+        connection.rollback()  # Revertir cambios en caso de error
+        
+        # Obtener el código de error de PostgreSQL y el mensaje detallado
+        error_code = e.pgcode if hasattr(e, 'pgcode') else "Sin código"
+        error_message = e.pgerror if hasattr(e, 'pgerror') else str(e)
+
+        print(f"❌ Error en la base de datos (Código: {error_code}): {error_message}")
+
 
     finally:
         if connection:

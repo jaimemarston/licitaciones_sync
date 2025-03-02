@@ -11,7 +11,6 @@ def clear_tables(cursor):
     tables = [
         "licitaciones_postores",
         "licitaciones_proveedor",
-        "licitaciones_documento",
         "licitaciones_item",
         "licitaciones_cronograma",
         "licitaciones_licitacion",
