@@ -34,7 +34,7 @@ def insert_data_into_db(records):
             cursor.execute("""
                 INSERT INTO licitaciones_licitacion (
                     id_licitacion, titulo, fecha_publicacion, objeto_contratacion,
-                    monto_total, moneda, comprador_id, metodo_adquisicion, categoria_adquisicion
+                    monto_total, moneda, buyer_id, metodo_adquisicion, categoria_adquisicion
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
@@ -50,12 +50,13 @@ def insert_data_into_db(records):
                 categoria_es
             ))
             licitacion_id = cursor.fetchone()[0]
-            print(f"✅ Licitación insertada con ID: {licitacion_id}")
-            # Insertar relación en la tabla pivote licitaciones_buyer_pivot
-            cursor.execute("""
-                INSERT INTO licitaciones_buyer_pivot (tender_id, buyer_id)
-                VALUES (%s, %s)
-            """, (licitacion_id, comprador_id))
+            if 1==2:
+                print(f"✅ Licitación insertada con ID: {licitacion_id}")
+                # Insertar relación en la tabla pivote licitaciones_buyer_pivot
+                cursor.execute("""
+                    INSERT INTO licitaciones_buyer_pivot (tender_id, buyer_id)
+                    VALUES (%s, %s)
+                """, (licitacion_id, comprador_id))
 
             #print(f"✅ Relación insertada en `licitaciones_buyer_pivot`: Licitación {licitacion_id} ↔ Comprador {comprador_id}")
 
@@ -90,11 +91,11 @@ def insert_data_into_db(records):
 
                     cursor.execute("""
                         INSERT INTO licitaciones_cronograma (
-                            licitacion_id, title, fecha_inicio, fecha_fin, duracion_dias
+                            licitacion_id, title, fecha_inicio, fecha_fin, duracion_dias, name
                         )
-                        VALUES (%s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                     """, (
-                        licitacion_id, period_type, start_date, end_date, duration_days
+                        licitacion_id, period_type, start_date, end_date, duration_days,licitacion_id
                     ))
                     
                #print(f"📅 Periodo '{period_type}' insertado para la licitación {licitacion_id}")
@@ -128,15 +129,17 @@ def insert_data_into_db(records):
                 url = doc.get('url') if doc.get('url') else "Sin url"  # Asigna "URL" si no tiene
                 cursor.execute("""
                   INSERT INTO licitaciones_cronograma (
-                            licitacion_id, url, fecha_inicio, tipo_documento, title
+                            licitacion_id, url, fecha_inicio, tipo_documento, title, name, fecha_fin
                         )
-                        VALUES (%s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (
                     licitacion_id,
                     url,
                     doc.get('datePublished'),
                     doc.get('documentType'),
-                    title       
+                    title,
+                    licitacion_id,
+                    doc.get('datePublished')
                     ))
 
 
