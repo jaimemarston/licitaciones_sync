@@ -31,7 +31,7 @@ PARAMS = {
     'ocid':'',
     'tenderId':'',
     'startDate':'2024-01-01',
-    'endDate':'2024-01-15',
+    'endDate':'2024-01-05',
     'page': 1,  # Paginación inicial
     'limit': 100  # Intenta aumentar este valor si la API lo permite 992903
 } 

@@ -65,3 +65,52 @@ def translate_category(categoria):
         'services': 'servicios'
     }
     return CATEGORIA_MAP.get(categoria, categoria)
+
+
+def insert_or_update_favorites(cursor):
+    """ Vincula licitaciones con favoritos basado en `claves` y `objeto_contratacion`."""
+    
+    # 1️⃣ Obtener relaciones que deberían existir
+    cursor.execute("""
+        WITH matching_licitaciones AS (
+            SELECT f.id AS favorites_id, l.id AS licitacion_id
+            FROM licitaciones_favorites f
+            JOIN licitaciones_licitacion l ON l.objeto_contratacion ILIKE '%' || f.claves || '%'
+        )
+        SELECT favorites_id, licitacion_id FROM matching_licitaciones;
+    """)
+    
+    relaciones = cursor.fetchall()  # Lista de tuplas (favorites_id, licitacion_id)
+
+    # 2️⃣ Insertar solo si no existe
+    for favorites_id, licitacion_id in relaciones:
+        cursor.execute("""
+            SELECT 1 FROM licitaciones_favorites_licitaciones_licitacion_rel
+            WHERE licitaciones_favorites_id = %s AND licitaciones_licitacion_id = %s
+        """, (favorites_id, licitacion_id))
+
+        if cursor.fetchone() is None:  # Si no existe, insertamos
+            cursor.execute("""
+                INSERT INTO licitaciones_favorites_licitaciones_licitacion_rel (licitaciones_favorites_id, licitaciones_licitacion_id)
+                VALUES (%s, %s)
+            """, (favorites_id, licitacion_id))
+    
+            print("✅ Relaciones actualizadas en `licitaciones_favorites_licitaciones_licitacion_rel`.")
+
+
+def update_bidder_winner(cursor):
+    """Actualiza el campo bidder_winner en la tabla licitaciones_licitacion con el ID del postor ganador."""
+    
+    cursor.execute("""
+        WITH ganador AS (
+            SELECT lp.licitacion_id, lp.supplier_id
+            FROM licitaciones_postores lp
+            WHERE lp.ganador = TRUE
+        )
+        UPDATE licitaciones_licitacion ll
+        SET bidder_winner = ganador.supplier_id
+        FROM ganador
+        WHERE ll.id = ganador.licitacion_id;
+    """)
+
+    print("✅ Se ha actualizado el campo `bidder_winner` en `licitaciones_licitacion` con el postor ganador.")
