@@ -16,22 +16,23 @@ API_URL = "https://contratacionesabiertas.osce.gob.pe/api/v1/records"
 
 
 # Agregar paginación para traer más de 20 registros
-""" PARAMS = {
-    'order': 'desc',
-    'sourceId': 'seace_v3',
-    'dataSegmentationID': '2024-12',
-    'tenderId':'',
-    'page': 1,  # Paginación inicial
-    'limit': 100  # Intenta aumentar este valor si la API lo permite
-}  """
 
 PARAMS = {
     'order': 'desc',
     'sourceId': 'seace_v3',
+    'dataSegmentationID': '',
+    'tenderId':'',
+    'page': 1,  # Paginación inicial
+    'limit': 100  # Intenta aumentar este valor si la API lo permite
+} 
+ 
+""" PARAMS = {
+    'order': 'desc',
+    'sourceId': 'seace_v3',
     'ocid':'',
     'tenderId':'',
-    'startDate':'2024-01-01',
-    'endDate':'2024-01-05',
+    'startDate':'2024-02-01',
+    'endDate':'2024-02-2',
     'page': 1,  # Paginación inicial
     'limit': 100  # Intenta aumentar este valor si la API lo permite 992903
-} 
+} """

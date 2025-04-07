@@ -22,7 +22,7 @@ def get_or_create_comprador(cursor, buyer):
         buyer.get('address', {}).get('region'),
         buyer.get('address', {}).get('countryName')
     ))
-
+    
     return cursor.fetchone()[0]
 
 def get_or_create_proveedor(cursor, tenderer):
@@ -94,9 +94,6 @@ def insert_or_update_favorites(cursor):
                 INSERT INTO licitaciones_favorites_licitaciones_licitacion_rel (licitaciones_favorites_id, licitaciones_licitacion_id)
                 VALUES (%s, %s)
             """, (favorites_id, licitacion_id))
-    
-            print("✅ Relaciones actualizadas en `licitaciones_favorites_licitaciones_licitacion_rel`.")
-
 
 def update_bidder_winner(cursor):
     """Actualiza el campo bidder_winner en la tabla licitaciones_licitacion con el ID del postor ganador."""
@@ -113,4 +110,55 @@ def update_bidder_winner(cursor):
         WHERE ll.id = ganador.licitacion_id;
     """)
 
-    print("✅ Se ha actualizado el campo `bidder_winner` en `licitaciones_licitacion` con el postor ganador.")
+
+
+
+
+def create_indexes():
+    import psycopg2
+    from database import get_db_connection
+
+    """Crea la PRIMARY KEY y los índices en la base de datos si no existen."""
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # 📌 Crear PRIMARY KEY solo si no existe
+        cursor.execute("""
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.table_constraints 
+                    WHERE table_name = 'licitaciones_licitacion' AND constraint_type = 'PRIMARY KEY'
+                ) THEN
+                    ALTER TABLE licitaciones_licitacion ADD PRIMARY KEY (id_licitacion);
+                END IF;
+            END $$;
+        """)
+        print("✅ PRIMARY KEY en `id_licitacion` verificada.")
+
+        # 📌 Crear índices adicionales
+        indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_licitaciones_titulo ON licitaciones_licitacion (titulo);",
+            "CREATE INDEX IF NOT EXISTS idx_comprador_id ON licitaciones_licitacion (buyer_id);",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_cronograma_unique ON licitaciones_cronograma (licitacion_id, title);",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_postores_unique ON licitaciones_postores (licitacion_id, supplier_id);",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique ON licitaciones_item (id_item, licitacion_id);"
+
+        ]
+
+        for index_query in indexes:
+            cursor.execute(index_query)
+        
+        connection.commit()
+        print("✅ Índices creados correctamente (o ya existían).")
+
+    except psycopg2.DatabaseError as e:
+        connection.rollback()
+        print(f"❌ Error al crear la PRIMARY KEY o índices: {e}")
+
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()

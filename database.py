@@ -8,6 +8,7 @@ def get_db_connection():
 
 def clear_tables(cursor):
     """Elimina datos existentes en las tablas relacionadas con licitaciones."""
+    return
     tables = [
         "licitaciones_postores",
         "licitaciones_proveedor",
